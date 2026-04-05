@@ -27,12 +27,57 @@ arena_pen.hideturtle()
 # Snake head
 head = turtle.Turtle()
 head.speed(0)
-head.shape("triangle")
-head.shapesize(stretch_wid=1.1, stretch_len=1.5)
 head.color("dark green", "lime green")
 head.penup()
 head.goto(0, 0)
 head.direction = "stop"
+
+HEAD_STYLES = {
+    "1": ("triangle", 1.1, 1.5),
+    "2": ("classic", 1.0, 1.9),
+    "3": ("square", 1.0, 1.5),
+    "4": ("arrow", 1.0, 1.7),
+    "5": ("circle", 1.0, 1.3),
+}
+
+
+def apply_head_style(style_key: str) -> None:
+    shape_name, stretch_wid, stretch_len = HEAD_STYLES[style_key]
+    head.shape(shape_name)
+    head.shapesize(stretch_wid=stretch_wid, stretch_len=stretch_len)
+
+
+def choose_head_style(style_key: str) -> None:
+    global selecting_head
+    if not selecting_head:
+        return
+    apply_head_style(style_key)
+    selecting_head = False
+    stop_intro_music()
+    hide_head_options()
+
+
+def select_head_1() -> None:
+    choose_head_style("1")
+
+
+def select_head_2() -> None:
+    choose_head_style("2")
+
+
+def select_head_3() -> None:
+    choose_head_style("3")
+
+
+def select_head_4() -> None:
+    choose_head_style("4")
+
+
+def select_head_5() -> None:
+    choose_head_style("5")
+
+
+apply_head_style("1")
 head.setheading(90)
 
 # Food
@@ -56,6 +101,8 @@ points_per_level = 100
 delay = 0.1
 game_over = False
 game_won = False
+selecting_head = True
+intro_music_active = False
 flash_state = False
 
 pen = turtle.Turtle()
@@ -83,6 +130,91 @@ shadow_pen.color("white")
 shadow_pen.penup()
 shadow_pen.hideturtle()
 shadow_pen.goto(4, -4)
+
+control_pen = turtle.Turtle()
+control_pen.speed(0)
+control_pen.color("dark olive green")
+control_pen.penup()
+control_pen.hideturtle()
+control_pen.goto(0, -292)
+
+
+def show_head_options() -> None:
+    draw_start_screen()
+    start_intro_music()
+    control_pen.clear()
+    control_pen.write(
+        "Press 1-5: 1 Triangle  2 Classic  3 Square  4 Arrow  5 Circle",
+        align="center",
+        font=("Courier", 10, "normal"),
+    )
+
+
+def hide_head_options() -> None:
+    message_pen.clear()
+    shadow_pen.clear()
+    control_pen.clear()
+
+
+def draw_start_screen() -> None:
+    shadow_pen.clear()
+    message_pen.clear()
+    shadow_pen.goto(4, -4)
+    shadow_pen.write(
+        "SELECT HEAD",
+        align="center",
+        font=("Courier", 38, "bold"),
+    )
+    message_pen.goto(0, 0)
+    message_pen.write(
+        "SELECT HEAD",
+        align="center",
+        font=("Courier", 38, "bold"),
+    )
+    message_pen.goto(0, -52)
+    message_pen.write(
+        "CHOOSE YOUR SNAKE STYLE",
+        align="center",
+        font=("Courier", 16, "normal"),
+    )
+
+
+def start_intro_music() -> None:
+    global intro_music_active
+    if intro_music_active:
+        return
+    intro_music_active = True
+
+    # Original heroic arcade riff inspired by retro action games.
+    melody = [
+        (392, 120),
+        (523, 120),
+        (587, 120),
+        (659, 180),
+        (587, 120),
+        (523, 120),
+        (494, 180),
+        (523, 120),
+        (587, 120),
+        (659, 180),
+        (784, 240),
+    ]
+
+    def _play() -> None:
+        while intro_music_active:
+            for freq, duration in melody:
+                if not intro_music_active:
+                    return
+                winsound.Beep(freq, duration)
+                time.sleep(0.02)
+            time.sleep(0.1)
+
+    threading.Thread(target=_play, daemon=True).start()
+
+
+def stop_intro_music() -> None:
+    global intro_music_active
+    intro_music_active = False
 
 
 def play_eat_sound() -> None:
@@ -150,6 +282,7 @@ def clear_game_over() -> None:
 def trigger_game_over() -> None:
     global game_over
     game_over = True
+    stop_intro_music()
     head.direction = "stop"
     show_game_over()
 
@@ -158,30 +291,39 @@ def trigger_win() -> None:
     global game_over, game_won
     game_over = True
     game_won = True
+    stop_intro_music()
     head.direction = "stop"
     pen.clear()
     draw_end_screen("YOU WIN!")
 
 
 def go_up() -> None:
+    if selecting_head:
+        return
     if head.direction != "down":
         head.direction = "up"
         head.setheading(90)
 
 
 def go_down() -> None:
+    if selecting_head:
+        return
     if head.direction != "up":
         head.direction = "down"
         head.setheading(270)
 
 
 def go_left() -> None:
+    if selecting_head:
+        return
     if head.direction != "right":
         head.direction = "left"
         head.setheading(180)
 
 
 def go_right() -> None:
+    if selecting_head:
+        return
     if head.direction != "left":
         head.direction = "right"
         head.setheading(0)
@@ -252,7 +394,7 @@ def sync_level_obstacles() -> None:
 
 
 def reset_game() -> None:
-    global delay, score, level, game_won
+    global delay, score, level, game_won, selecting_head
 
     time.sleep(0.6)
     head.goto(0, 0)
@@ -272,8 +414,10 @@ def reset_game() -> None:
     level = 1
     delay = 0.1
     game_won = False
+    selecting_head = True
     sync_level_obstacles()
     spawn_food()
+    show_head_options()
     update_scoreboard()
 
 
@@ -287,6 +431,7 @@ def replay() -> None:
 
 sync_level_obstacles()
 spawn_food()
+show_head_options()
 
 
 # Keyboard bindings
@@ -301,6 +446,11 @@ wn.onkeypress(go_left, "a")
 wn.onkeypress(go_right, "d")
 wn.onkeypress(replay, "r")
 wn.onkeypress(replay, "R")
+wn.onkeypress(select_head_1, "1")
+wn.onkeypress(select_head_2, "2")
+wn.onkeypress(select_head_3, "3")
+wn.onkeypress(select_head_4, "4")
+wn.onkeypress(select_head_5, "5")
 
 # Main game loop
 while True:
