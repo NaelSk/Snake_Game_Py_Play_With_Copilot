@@ -6,25 +6,40 @@ import winsound
 
 # Window setup
 wn = turtle.Screen()
-wn.title("Classic Snake")
-wn.bgcolor("black")
+wn.title("Sunny Snake")
+wn.bgcolor("light goldenrod")
 wn.setup(width=620, height=620)
 wn.tracer(0)
+
+# Playfield border
+arena_pen = turtle.Turtle()
+arena_pen.speed(0)
+arena_pen.color("forest green")
+arena_pen.pensize(4)
+arena_pen.penup()
+arena_pen.goto(-300, -300)
+arena_pen.pendown()
+for _ in range(4):
+    arena_pen.forward(600)
+    arena_pen.left(90)
+arena_pen.hideturtle()
 
 # Snake head
 head = turtle.Turtle()
 head.speed(0)
-head.shape("square")
-head.color("lime")
+head.shape("triangle")
+head.shapesize(stretch_wid=1.1, stretch_len=1.5)
+head.color("dark green", "lime green")
 head.penup()
 head.goto(0, 0)
 head.direction = "stop"
+head.setheading(90)
 
 # Food
 food = turtle.Turtle()
 food.speed(0)
 food.shape("circle")
-food.color("red")
+food.color("orange red")
 food.penup()
 food.goto(0, 100)
 
@@ -40,7 +55,7 @@ flash_state = False
 
 pen = turtle.Turtle()
 pen.speed(0)
-pen.color("white")
+pen.color("dark green")
 pen.penup()
 pen.hideturtle()
 pen.goto(0, 280)
@@ -52,14 +67,14 @@ pen.write(
 
 message_pen = turtle.Turtle()
 message_pen.speed(0)
-message_pen.color("cyan")
+message_pen.color("dark green")
 message_pen.penup()
 message_pen.hideturtle()
 message_pen.goto(0, 0)
 
 shadow_pen = turtle.Turtle()
 shadow_pen.speed(0)
-shadow_pen.color("magenta")
+shadow_pen.color("white")
 shadow_pen.penup()
 shadow_pen.hideturtle()
 shadow_pen.goto(4, -4)
@@ -67,17 +82,21 @@ shadow_pen.goto(4, -4)
 
 def play_eat_sound() -> None:
     """Ascending 8-bit style pickup blip (non-blocking)."""
+
     def _play():
         for freq in (600, 800, 1000):
             winsound.Beep(freq, 40)
+
     threading.Thread(target=_play, daemon=True).start()
 
 
 def play_crash_sound() -> None:
     """Descending harsh crash tone (non-blocking)."""
+
     def _play():
         for freq in (400, 300, 200, 150):
             winsound.Beep(freq, 60)
+
     threading.Thread(target=_play, daemon=True).start()
 
 
@@ -114,7 +133,7 @@ def draw_arcade_game_over() -> None:
 
 
 def show_game_over() -> None:
-    pen.clear()  # hide scoreboard
+    pen.clear()  # Hide scoreboard during game-over display.
     draw_arcade_game_over()
 
 
@@ -133,21 +152,25 @@ def trigger_game_over() -> None:
 def go_up() -> None:
     if head.direction != "down":
         head.direction = "up"
+        head.setheading(90)
 
 
 def go_down() -> None:
     if head.direction != "up":
         head.direction = "down"
+        head.setheading(270)
 
 
 def go_left() -> None:
     if head.direction != "right":
         head.direction = "left"
+        head.setheading(180)
 
 
 def go_right() -> None:
     if head.direction != "left":
         head.direction = "right"
+        head.setheading(0)
 
 
 def move() -> None:
@@ -219,8 +242,8 @@ while True:
 
             new_segment = turtle.Turtle()
             new_segment.speed(0)
-            new_segment.shape("square")
-            new_segment.color("green")
+            new_segment.shape("circle")
+            new_segment.color("sea green")
             new_segment.penup()
             segments.append(new_segment)
 
@@ -249,9 +272,9 @@ while True:
                 trigger_game_over()
                 break
     else:
-        # Subtle blink effect for an 80s arcade look.
+        # Subtle blink effect for the game-over text.
         flash_state = not flash_state
-        message_pen.color("cyan" if flash_state else "white")
+        message_pen.color("dark green" if flash_state else "forest green")
         draw_arcade_game_over()
 
     time.sleep(delay)
