@@ -45,12 +45,17 @@ food.goto(0, 100)
 
 # Snake body segments
 segments = []
+obstacles = []
 
 # Score
 score = 0
 high_score = 0
+level = 1
+max_level = 4
+points_per_level = 100
 delay = 0.1
 game_over = False
+game_won = False
 flash_state = False
 
 pen = turtle.Turtle()
@@ -60,7 +65,7 @@ pen.penup()
 pen.hideturtle()
 pen.goto(0, 280)
 pen.write(
-    f"Score: {score}  High: {high_score}",
+    f"Score: {score}  High: {high_score}  Level: {level}/{max_level}",
     align="center",
     font=("Courier", 16, "normal"),
 )
@@ -103,24 +108,24 @@ def play_crash_sound() -> None:
 def update_scoreboard() -> None:
     pen.clear()
     pen.write(
-        f"Score: {score}  High: {high_score}",
+        f"Score: {score}  High: {high_score}  Level: {level}/{max_level}",
         align="center",
         font=("Courier", 16, "normal"),
     )
 
 
-def draw_arcade_game_over() -> None:
+def draw_end_screen(title_text: str) -> None:
     shadow_pen.clear()
     message_pen.clear()
     shadow_pen.goto(4, -4)
     shadow_pen.write(
-        "GAME OVER",
+        title_text,
         align="center",
         font=("Courier", 38, "bold"),
     )
     message_pen.goto(0, 0)
     message_pen.write(
-        "GAME OVER",
+        title_text,
         align="center",
         font=("Courier", 38, "bold"),
     )
@@ -134,7 +139,7 @@ def draw_arcade_game_over() -> None:
 
 def show_game_over() -> None:
     pen.clear()  # Hide scoreboard during game-over display.
-    draw_arcade_game_over()
+    draw_end_screen("GAME OVER")
 
 
 def clear_game_over() -> None:
@@ -147,6 +152,15 @@ def trigger_game_over() -> None:
     game_over = True
     head.direction = "stop"
     show_game_over()
+
+
+def trigger_win() -> None:
+    global game_over, game_won
+    game_over = True
+    game_won = True
+    head.direction = "stop"
+    pen.clear()
+    draw_end_screen("YOU WIN!")
 
 
 def go_up() -> None:
@@ -187,19 +201,79 @@ def move() -> None:
         head.setx(x + 20)
 
 
+def obstacle_positions() -> set[tuple[int, int]]:
+    return {(int(obs.xcor()), int(obs.ycor())) for obs in obstacles}
+
+
+def spawn_food() -> None:
+    blocked = obstacle_positions()
+    blocked.add((int(head.xcor()), int(head.ycor())))
+    blocked.update({(int(seg.xcor()), int(seg.ycor())) for seg in segments})
+
+    while True:
+        fx = random.randint(-14, 14) * 20
+        fy = random.randint(-14, 14) * 20
+        if (fx, fy) not in blocked:
+            food.goto(fx, fy)
+            return
+
+
+def spawn_one_obstacle() -> bool:
+    blocked = obstacle_positions()
+    blocked.add((int(head.xcor()), int(head.ycor())))
+    blocked.add((int(food.xcor()), int(food.ycor())))
+    blocked.update({(int(seg.xcor()), int(seg.ycor())) for seg in segments})
+
+    # Keep the center area less crowded to make early gameplay fair.
+    for _ in range(200):
+        ox = random.randint(-14, 14) * 20
+        oy = random.randint(-14, 14) * 20
+        if abs(ox) <= 60 and abs(oy) <= 60:
+            continue
+        if (ox, oy) in blocked:
+            continue
+
+        obstacle = turtle.Turtle()
+        obstacle.speed(0)
+        obstacle.shape("square")
+        obstacle.color("saddle brown")
+        obstacle.penup()
+        obstacle.goto(ox, oy)
+        obstacles.append(obstacle)
+        return True
+    return False
+
+
+def sync_level_obstacles() -> None:
+    target_obstacles = level
+    while len(obstacles) < target_obstacles:
+        if not spawn_one_obstacle():
+            break
+
+
 def reset_game() -> None:
-    global delay, score
+    global delay, score, level, game_won
 
     time.sleep(0.6)
     head.goto(0, 0)
     head.direction = "stop"
+    head.setheading(90)
 
     for seg in segments:
         seg.goto(1000, 1000)
     segments.clear()
 
+    for obs in obstacles:
+        obs.goto(1000, 1000)
+        obs.hideturtle()
+    obstacles.clear()
+
     score = 0
+    level = 1
     delay = 0.1
+    game_won = False
+    sync_level_obstacles()
+    spawn_food()
     update_scoreboard()
 
 
@@ -209,6 +283,10 @@ def replay() -> None:
         clear_game_over()
         reset_game()
         game_over = False
+
+
+sync_level_obstacles()
+spawn_food()
 
 
 # Keyboard bindings
@@ -234,11 +312,16 @@ while True:
             play_crash_sound()
             trigger_game_over()
 
+        # Obstacle collision
+        for obs in obstacles:
+            if head.distance(obs) < 14:
+                play_crash_sound()
+                trigger_game_over()
+                break
+
         # Food collision
-        if head.distance(food) < 20:
-            fx = random.randint(-14, 14) * 20
-            fy = random.randint(-14, 14) * 20
-            food.goto(fx, fy)
+        if not game_over and head.distance(food) < 20:
+            spawn_food()
 
             new_segment = turtle.Turtle()
             new_segment.speed(0)
@@ -249,6 +332,16 @@ while True:
 
             delay = max(0.04, delay - 0.002)
             score += 10
+            level = min(max_level, score // points_per_level + 1)
+            sync_level_obstacles()
+
+            if score >= max_level * points_per_level:
+                if score > high_score:
+                    high_score = score
+                update_scoreboard()
+                trigger_win()
+                continue
+
             if score > high_score:
                 high_score = score
             update_scoreboard()
@@ -275,6 +368,6 @@ while True:
         # Subtle blink effect for the game-over text.
         flash_state = not flash_state
         message_pen.color("dark green" if flash_state else "forest green")
-        draw_arcade_game_over()
+        draw_end_screen("YOU WIN!" if game_won else "GAME OVER")
 
     time.sleep(delay)
