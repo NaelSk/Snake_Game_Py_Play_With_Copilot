@@ -1,6 +1,7 @@
 import random
 import threading
 import time
+import math
 import turtle
 import winsound
 
@@ -45,6 +46,7 @@ def apply_head_style(style_key: str) -> None:
     shape_name, stretch_wid, stretch_len = HEAD_STYLES[style_key]
     head.shape(shape_name)
     head.shapesize(stretch_wid=stretch_wid, stretch_len=stretch_len)
+    head.color("dark green", "lime green")
 
 
 def choose_head_style(style_key: str) -> None:
@@ -217,6 +219,58 @@ def stop_intro_music() -> None:
     intro_music_active = False
 
 
+def play_space_explosion(x: float, y: float) -> None:
+    particle_specs = []
+    particle_colors = ["white", "gold", "orange", "tomato", "yellow"]
+
+    for _ in range(28):
+        particle = turtle.Turtle()
+        particle.speed(0)
+        particle.shape("circle")
+        particle.color(random.choice(particle_colors))
+        particle.penup()
+        particle.goto(x, y)
+        particle.shapesize(stretch_wid=0.35, stretch_len=0.35)
+
+        angle = random.uniform(0, 360)
+        velocity = random.uniform(7.0, 16.0)
+        particle_specs.append((particle, angle, velocity))
+
+    for frame in range(9):
+        for particle, angle, velocity in particle_specs:
+            dist = velocity * (frame + 1)
+            px = x + math.cos(math.radians(angle)) * dist
+            py = y + math.sin(math.radians(angle)) * dist
+            particle.goto(px, py)
+            scale = max(0.15, 0.35 - frame * 0.02)
+            particle.shapesize(stretch_wid=scale, stretch_len=scale)
+        wn.update()
+        time.sleep(0.025)
+
+    for particle, _, _ in particle_specs:
+        particle.hideturtle()
+        particle.goto(1000, 1000)
+
+
+def scatter_snake_as_dots(x: float, y: float) -> None:
+    snake_parts = [head] + segments
+    for part in snake_parts:
+        part.shape("circle")
+        part.color("white")
+        part.shapesize(stretch_wid=0.3, stretch_len=0.3)
+        part.penup()
+
+    for _ in range(7):
+        for part in snake_parts:
+            nx = x + random.randint(-120, 120)
+            ny = y + random.randint(-120, 120)
+            nx = max(-295, min(295, nx))
+            ny = max(-295, min(295, ny))
+            part.goto(nx, ny)
+        wn.update()
+        time.sleep(0.02)
+
+
 def play_eat_sound() -> None:
     """Ascending 8-bit style pickup blip (non-blocking)."""
 
@@ -281,9 +335,13 @@ def clear_game_over() -> None:
 
 def trigger_game_over() -> None:
     global game_over
+    crash_x = head.xcor()
+    crash_y = head.ycor()
     game_over = True
     stop_intro_music()
     head.direction = "stop"
+    play_space_explosion(crash_x, crash_y)
+    scatter_snake_as_dots(crash_x, crash_y)
     show_game_over()
 
 
@@ -400,6 +458,7 @@ def reset_game() -> None:
     head.goto(0, 0)
     head.direction = "stop"
     head.setheading(90)
+    apply_head_style("1")
 
     for seg in segments:
         seg.goto(1000, 1000)
