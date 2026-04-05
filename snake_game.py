@@ -1,6 +1,8 @@
 import random
+import threading
 import time
 import turtle
+import winsound
 
 # Window setup
 wn = turtle.Screen()
@@ -61,6 +63,22 @@ shadow_pen.color("magenta")
 shadow_pen.penup()
 shadow_pen.hideturtle()
 shadow_pen.goto(4, -4)
+
+
+def play_eat_sound() -> None:
+    """Ascending 8-bit style pickup blip (non-blocking)."""
+    def _play():
+        for freq in (600, 800, 1000):
+            winsound.Beep(freq, 40)
+    threading.Thread(target=_play, daemon=True).start()
+
+
+def play_crash_sound() -> None:
+    """Descending harsh crash tone (non-blocking)."""
+    def _play():
+        for freq in (400, 300, 200, 150):
+            winsound.Beep(freq, 60)
+    threading.Thread(target=_play, daemon=True).start()
 
 
 def update_scoreboard() -> None:
@@ -190,6 +208,7 @@ while True:
     if not game_over:
         # Wall collision
         if abs(head.xcor()) > 300 or abs(head.ycor()) > 300:
+            play_crash_sound()
             trigger_game_over()
 
         # Food collision
@@ -210,6 +229,7 @@ while True:
             if score > high_score:
                 high_score = score
             update_scoreboard()
+            play_eat_sound()
 
         # Move body segments from tail to head
         for i in range(len(segments) - 1, 0, -1):
@@ -225,6 +245,7 @@ while True:
         # Self collision
         for seg in segments:
             if seg.distance(head) < 10:
+                play_crash_sound()
                 trigger_game_over()
                 break
     else:
