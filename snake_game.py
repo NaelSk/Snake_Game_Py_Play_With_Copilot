@@ -580,3 +580,11 @@ while True:
         draw_end_screen("YOU WIN!" if game_won else "GAME OVER")
 
     time.sleep(delay)
+
+                                 
+##fabinacci function
+def fibonacci(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
